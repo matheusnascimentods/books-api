@@ -1,130 +1,264 @@
-# BookAPI
-Este repositório contém uma API RESTful para gerenciamento de livros, desenvolvida em Java com Spring Boot. A aplicação modela três entidades principais: Livro, Autor e Editora, estabelecendo relacionamentos entre elas para refletir a estrutura de um catálogo literário. A API implementa validações robustas para garantir a integridade dos dados, assegurando que apenas informações consistentes sejam armazenadas no banco de dados.
-Este projeto foi desenvolvido para consolidar conhecimentos em desenvolvimento de APIs RESTful com Spring Boot, integrando práticas recomendadas e ferramentas modernas para a construção de aplicações robustas e escaláveis.
+# 📚 Books API — Catálogo Literário
 
-## Principais Tecnologias e Ferramentas Utilizadas:
+![Java](https://img.shields.io/badge/Java-17-ED8B00?style=for-the-badge&logo=openjdk&logoColor=white)
+![Spring Boot](https://img.shields.io/badge/Spring_Boot-2.7.4-6DB33F?style=for-the-badge&logo=springboot&logoColor=white)
+![MySQL](https://img.shields.io/badge/MySQL-4479A1?style=for-the-badge&logo=mysql&logoColor=white)
+![License](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)
+![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=for-the-badge)
 
-* MapStruct: Utilizado para mapeamento eficiente entre as entidades e seus respectivos DTOs (Data Transfer Objects), facilitando a conversão de dados entre camadas da aplicação.
+> Cadastro de livros, autores e editoras com relacionamentos, validação e respostas de erro padronizadas.
 
-* Lombok: Empregado para reduzir a verbosidade do código, gerando automaticamente métodos como getters, setters e construtores, promovendo um código mais limpo e conciso.
+A **Books API** é uma API RESTful desenvolvida em **Java 17** e **Spring Boot** para gerenciar um catálogo literário. Ela modela três entidades — **Livro** (`Book`), **Autor** (`Author`) e **Editora** (`Publisher`) — e relaciona cada livro ao seu autor e à sua editora. A API valida os dados de entrada, impede duplicidade de títulos e nomes e devolve erros num formato JSON único.
 
-* MySQL: Escolhido como banco de dados relacional para persistência dos dados, garantindo robustez e escalabilidade.
-  
-## Instalação
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Client as Cliente
+    participant API as BookController
+    participant Service as BookService
+    participant Related as AuthorService / PublisherService
+    participant DB as MySQL
 
-Faça o clone do repositório:
-
-```Ruby
-  git clone https://github.com/matheusnascimentods/ManagementAPI.git
+    Client->>API: POST /book (BookRequestDTO)
+    API->>API: Bean Validation (@Valid)
+    API->>Service: post(dto)
+    Service->>DB: Título já existe?
+    alt Título duplicado
+        Service-->>Client: 400 Bad Request (apiError)
+    else Título novo
+        Service->>Related: Buscar autor e editora por id
+        alt Autor ou editora inexistente
+            Related-->>Client: 404 Not Found (apiError)
+        else Encontrados
+            Service->>DB: Persistir Book
+            API-->>Client: 201 Created (Livro com autor e editora)
+        end
+    end
 ```
 
-Entre na pasta do repositório
-```Ruby
-  cd bookapi/target
+---
+
+## ✨ O Problema
+Catálogos de bibliotecas e livrarias costumam sofrer com:
+- **Dados inconsistentes**: Livros cadastrados sem autor, sem editora ou com informações incompletas.
+- **Duplicidade**: O mesmo título, autor ou editora cadastrado mais de uma vez.
+- **Erros pouco claros**: Respostas de erro diferentes em cada rota, difíceis de tratar no cliente.
+
+---
+
+## 🚀 A Solução
+- **Relacionamentos explícitos**: Cada livro referencia um autor e uma editora existentes (`authorId` e `publisherId`).
+- **Validação na entrada**: Campos obrigatórios e limites de tamanho validados com Bean Validation.
+- **Unicidade**: Títulos de livros e nomes de autores e editoras não se repetem.
+- **Erros padronizados**: Um `@ControllerAdvice` converte exceções em respostas com `message`, `status` e `timestamp`.
+
+---
+
+## 🎯 Diferenciais
+- **DTOs separados para entrada e saída**: `BookRequestDTO` recebe ids; `BookResponseDTO` devolve o autor e a editora completos.
+- **Mapeamento com MapStruct**: Conversão entre entidades e DTOs gerada em tempo de compilação.
+- **Camada de serviço**: Regras de negócio fora dos controllers.
+
+---
+
+## 🛠️ Stack Tecnológica
+
+| Camada | Tecnologia |
+|---|---|
+| **Linguagem** | Java 17 |
+| **Framework** | Spring Boot 2.7.4 (Web, Data JPA, Validation, DevTools) |
+| **Banco de Dados** | MySQL |
+| **Mapeamento Objeto-Objeto** | MapStruct 1.5.3 |
+| **Boilerplate Reduction** | Project Lombok |
+| **Build** | Maven (wrapper incluso) |
+
+---
+
+## 🏛️ Arquitetura
+
+O projeto segue uma arquitetura em camadas:
+
+```
+controller   ← Endpoints REST (BookController, AuthorController, PublisherController)
+   ↓
+service      ← Regras de negócio, unicidade e busca de relacionamentos
+   ↓
+repository   ← Interfaces Spring Data JPA
+   ↓
+model        ← Entidades JPA (Book, Author, Publisher)
 ```
 
-Antes de rodar o projeto crie uma banco de dados MySQL assim como o de `application.properties` e cole no terminal 
-```Ruby
-  java -jar api.jar
+### Principais Entidades
+- **`Book`**: Título, descrição, número de páginas e capítulos; pertence a um `Author` e a um `Publisher`.
+- **`Author`**: Nome e idade; possui vários livros.
+- **`Publisher`**: Nome único; possui vários livros.
+
+---
+
+## 📁 Estrutura do Projeto
+
+```text
+books-api/
+├── pom.xml
+├── mvnw / mvnw.cmd
+└── src/main/
+    ├── java/br/com/LibraryAPI/
+    │   ├── controller/          # Endpoints REST
+    │   ├── dto/                 # DTOs de entrada e saída
+    │   ├── exception/           # Exceções de domínio e handler global
+    │   ├── mapper/              # Mappers MapStruct
+    │   ├── model/               # Entidades JPA
+    │   ├── repository/          # Repositórios Spring Data
+    │   └── service/             # Regras de negócio
+    └── resources/
+        └── application.properties
 ```
 
-## Endpoints
+---
 
-##### Endpoints da entidade livros
-`GET` Consultar todos os livros
-```Ruby
- http://localhost:8080/book
+## ⚡ Quick Start
+
+### Pré-requisitos
+- [JDK 17](https://adoptium.net/) instalado
+- MySQL em execução na porta `3306`
+
+### 1. Clonar o repositório
+```bash
+git clone https://github.com/matheusnascimentods/books-api.git
+cd books-api
 ```
 
-`GET` Consultar livro pelo id
-```Ruby
- http://localhost:8080/book/{id}
+### 2. Criar o banco de dados
+```sql
+CREATE DATABASE library;
+```
+As tabelas são criadas automaticamente pelo Hibernate (`ddl-auto=update`).
+
+### 3. Executar a Aplicação
+```bash
+./mvnw spring-boot:run
 ```
 
-`POST` Cadastrar livro
-```Ruby
- http://localhost:8080/book
+A API estará disponível em: **`http://localhost:8080`**
+
+---
+
+## 💻 Comandos Úteis de Desenvolvimento
+
+```bash
+# Compilar o projeto e processar anotações (Lombok + MapStruct)
+./mvnw clean compile
+
+# Rodar os testes
+./mvnw test
+
+# Empacotar o JAR e executá-lo
+./mvnw clean package
+java -jar target/LibraryAPI-0.0.1-SNAPSHOT.jar
 ```
-```Ruby
+
+---
+
+## 🔌 API Reference
+
+### 📖 Livros (`/book`)
+| Método | Rota | Descrição |
+| :--- | :--- | :--- |
+| `GET` | `/book` | Lista todos os livros |
+| `GET` | `/book/{id}` | Busca um livro pelo id |
+| `POST` | `/book` | Cadastra um livro |
+| `PUT` | `/book/{id}` | Atualiza um livro |
+| `DELETE` | `/book/{id}` | Remove um livro |
+
+Corpo de `POST` e `PUT`:
+```json
 {
-    "title": "",
-    "description": "",
-    "pages": 0,
-    "chapters": 0,
-    "authorId": 0,
-    "publisherId": 0 
+  "title": "Dom Casmurro",
+  "description": "Romance de Machado de Assis",
+  "pages": 256,
+  "chapters": 148,
+  "authorId": 1,
+  "publisherId": 1
+}
+```
+`title` (até 225 caracteres) e `description` (até 550) são obrigatórios; `pages` e `chapters` aceitam no máximo 3000.
+
+### ✍️ Autores (`/author`)
+| Método | Rota | Descrição |
+| :--- | :--- | :--- |
+| `GET` | `/author` | Lista todos os autores |
+| `GET` | `/author/{id}` | Busca um autor pelo id |
+| `POST` | `/author` | Cadastra um autor |
+| `DELETE` | `/author/{id}` | Remove um autor |
+
+```json
+{ "name": "Machado de Assis", "age": 69 }
+```
+
+### 🏢 Editoras (`/publisher`)
+| Método | Rota | Descrição |
+| :--- | :--- | :--- |
+| `GET` | `/publisher` | Lista todas as editoras |
+| `GET` | `/publisher/{id}` | Busca uma editora pelo id |
+| `POST` | `/publisher` | Cadastra uma editora |
+| `DELETE` | `/publisher/{id}` | Remove uma editora |
+
+```json
+{ "name": "Companhia das Letras" }
+```
+
+### ⚠️ Respostas de erro
+| Status | Quando |
+| :--- | :--- |
+| `400` | Dados inválidos ou título/nome já cadastrado |
+| `404` | Livro, autor ou editora não encontrado |
+
+```json
+{
+  "message": "Não existe nenhum livro com o id 10",
+  "status": 404,
+  "timestamp": "10-11-2026 10:30:00"
 }
 ```
 
-`DELETE` Excluir livro
-```Ruby
- http://localhost:8080/book/{id}
-```
+---
 
-`PUT` Atualizar livro
-```Ruby
- http://localhost:8080/book/{id}
-```
-```Ruby
-{
-    "title": "",
-    "description": "",
-    "pages": 0,
-    "chapters": 0,
-    "authorId": 0,
-    "publisherId": 0 
-}
-```
+## 🗂️ Configuração
 
-##### Endpoints da entidade autores
-`GET` Consultar todos os autores
-```Ruby
- http://localhost:8080/author
-```
+As configurações ficam em [`application.properties`](src/main/resources/application.properties):
 
-`GET` Consultar autor pelo id
-```Ruby
- http://localhost:8080/author/{id}
-```
+| Propriedade | Descrição | Valor Default (Local) |
+| :--- | :--- | :--- |
+| `spring.datasource.url` | URL JDBC do MySQL | `jdbc:mysql://localhost:3306/library` |
+| `spring.datasource.username` | Usuário do banco | `root` |
+| `spring.datasource.password` | Senha do banco | `root` |
+| `spring.jpa.hibernate.ddl-auto` | Estratégia de criação do schema | `update` |
 
-`POST` Cadastrar autor
-```Ruby
- http://localhost:8080/author
-```
-```Ruby
-{
-    "name": "",
-    "age": 0 
-}
-```
+Pelo relaxed binding do Spring Boot, qualquer propriedade pode ser sobrescrita por variável de ambiente (ex.: `SPRING_DATASOURCE_PASSWORD`).
 
-`DELETE` Excluir autor
-```Ruby
- http://localhost:8080/author/{id}
-```
+---
 
-##### Endpoints da entidade editoras
-`GET` Consultar todas as editoras
-```Ruby
- http://localhost:8080/publisher
-```
+## 🔒 Segurança & Boas Práticas
 
-`GET` Consultar editora pelo id
-```Ruby
- http://localhost:8080/publisher/{id}
-```
+- **Validação de entrada**: Todas as escritas passam por Bean Validation antes de chegar ao serviço.
+- **Sem autenticação**: A API não possui autenticação; é um projeto de estudo e não deve ser exposta publicamente sem uma camada de segurança.
+- **Credenciais locais**: Os valores `root`/`root` servem apenas para desenvolvimento; use variáveis de ambiente em qualquer outro ambiente.
 
-`POST` Cadastrar editora
-```Ruby
- http://localhost:8080/publisher
-```
-```Ruby
-{
-    "name": ""
-}
-```
+---
 
-`DELETE` Excluir editora
-```Ruby
- http://localhost:8080/publisher/{id}
-```
+## 🤝 Contribuindo
+
+1. Faça um Fork do projeto
+2. Crie uma branch para a sua funcionalidade (`git checkout -b feature/nome-da-feature`)
+3. Faça o commit das suas alterações (`git commit -m 'feat: implementa nova funcionalidade'`)
+4. Envie para o repositório remoto (`git push origin feature/nome-da-feature`)
+5. Abra um **Pull Request** detalhando as alterações
+
+---
+
+## 📄 Licença
+
+Distribuído sob a licença MIT. Veja [`LICENSE.txt`](LICENSE.txt) para mais detalhes.
+
+---
+Feito com ❤️ por [@matheusnascimentods](https://github.com/matheusnascimentods)
